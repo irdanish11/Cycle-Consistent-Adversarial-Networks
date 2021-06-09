@@ -18,6 +18,8 @@ get_data () {
 } 
 
 
+mkdir data
+cd data
 array=("apple2orange" "summer2winter_yosemite" "horse2zebra" "monet2photo" 
        "cezanne2photo" "ukiyoe2photo" "vangogh2photo" "maps" "cityscapes" 
        "facades" "iphone2dslr_flower")
