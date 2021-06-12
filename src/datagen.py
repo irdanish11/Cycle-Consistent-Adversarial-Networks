@@ -13,6 +13,7 @@ import numpy as np
 from tqdm import tqdm
 import torch
 from torchvision import transforms
+import random
 
 def read_save_data(path, size):
     dir_path = os.listdir(path)  
@@ -60,6 +61,34 @@ class ImageLoader(torch.utils.data.Dataset):
     	# generate 'real' class labels (1)
         y = torch.ones((self.n_samples, self.patch_shape, self.patch_shape, 1))
         return X, y
+    
+
+class ImagePool:
+    """
+        Image pool of 50 generated images for each discriminator model that is 
+        first populated and probabilistically either adds new images to the 
+        pool by replacing an existing image or uses a generated image directly.
+    """
+    def __init__(self, max_size=50):
+        assert (max_size > 0)
+        self.max_size = max_size
+        self.data = []
+
+    def update_image_pool(self, data):
+        to_return = []
+        for element in data.data:
+            element = torch.unsqueeze(element, 0)
+            if len(self.data) < self.max_size:
+                self.data.append(element)
+                to_return.append(element)
+            else:
+                if random.uniform(0, 1) > 0.5:
+                    i = random.randint(0, self.max_size - 1)
+                    to_return.append(self.data[i].clone())
+                    self.data[i] = element
+                else:
+                    to_return.append(element)
+        return torch.cat(to_return)
     
 def get_data_loaders(data, batch_size, image_size, patch_shape):
     train_A, train_B = data
