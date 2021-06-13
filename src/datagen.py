@@ -39,11 +39,10 @@ def load_data(fname):
     
 
 class ImageLoader(torch.utils.data.Dataset):
-  def __init__(self, train_data, n_samples, patch_shape, transform):
+  def __init__(self, train_data, n_samples, transform):
         'Initialization'
         self.train_data = train_data
         self.n_samples = n_samples
-        self.patch_shape = patch_shape
         self.transform = transform
         self.total_samples = len(train_data)
 
@@ -58,9 +57,7 @@ class ImageLoader(torch.utils.data.Dataset):
     	# retrieve selected images
         X = self.train_data[idx][0]
         X = self.transform(X)
-    	# generate 'real' class labels (1)
-        y = torch.ones((self.n_samples, self.patch_shape, self.patch_shape, 1))
-        return X, y
+        return X
     
 
 class ImagePool:
@@ -90,19 +87,15 @@ class ImagePool:
                     to_return.append(element)
         return torch.cat(to_return)
     
-def get_data_loaders(data, batch_size, image_size, patch_shape):
+def get_data_loaders(data, batch_size, image_size):
     train_A, train_B = data
     transform = transforms.Compose([transforms.ToTensor(), 
                                     transforms.RandomCrop(image_size),
                                     transforms.RandomHorizontalFlip(),
                                     transforms.Normalize((0.5, 0.5, 0.5), 
                                                          (0.5, 0.5, 0.5))])
-    dataset_A = ImageLoader(train_A, n_samples=batch_size, 
-                                patch_shape=patch_shape,
-                                transform=transform)
-    dataset_B = ImageLoader(train_B, n_samples=batch_size, 
-                                patch_shape=patch_shape,
-                                transform=transform)
+    dataset_A = ImageLoader(train_A, n_samples=batch_size, transform=transform)
+    dataset_B = ImageLoader(train_B, n_samples=batch_size, transform=transform)
     #train_data, n_samples, patch_shape, transform
     dataloader_A = torch.utils.data.DataLoader(dataset_A, batch_size)
     dataloader_B = torch.utils.data.DataLoader(dataset_B, batch_size)
