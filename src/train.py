@@ -6,20 +6,18 @@ Created on Thu Jun 10 14:01:08 2021
 @author: danish
 """
 
-import torch
-import os
-from datagen import read_save_data, load_data, get_data_loaders
-from utils import get_device, get_optimizers, get_criterions
-from networks import Generator, Discriminator
-from datagen import ImagePool
 
-def get_models(device):
-    # create models
-    generator_A2B = Generator().to(device)
-    generator_B2A = Generator().to(device)
-    discriminator_A = Discriminator().to(device)
-    discriminator_B = Discriminator().to(device)
-    return generator_A2B, generator_B2A, discriminator_A, discriminator_B
+from datagen import read_save_data, load_data, get_data_loaders
+from nn import get_models, get_criterions, get_optimizers
+from utils import save_images, convert_seconds,save_models
+from utils import get_device, write_pickle, print_inline
+from utils import get_info_string, update_epoch_stats
+from datagen import ImagePool
+import torch
+import time
+import os
+
+
 
 
 def compute_identity_loss(generators, real_imgs, identity_loss):
@@ -71,7 +69,7 @@ def compute_cycle_loss(generators, real_imgs, fake_imgs, cycle_loss):
     
 
 def forward_generators(generators, discriminators, real_imgs, real_label, 
-                      loss_functions):
+                      loss_functions, epoch_history):
     cycle_loss, identity_loss, adversarial_loss = loss_functions
     #Identity loss: {G_B2A(A), A} & {G_A2B(B), B}
     identity_loss_A, identity_loss_B = compute_identity_loss(generators, 
@@ -91,37 +89,41 @@ def forward_generators(generators, discriminators, real_imgs, real_label,
                                                         real_imgs, 
                                                         fake_imgs, 
                                                         cycle_loss)
+    #summation of respective losses
+    id_loss = identity_loss_A + identity_loss_B
+    adv_loss = adversarial_loss_B2A + adversarial_loss_A2B
+    cy_loss = cycle_loss_ABA + cycle_loss_BAB
+    #Combined loss
+    combined_gan_loss = id_loss + adv_loss + cy_loss
+    #history update
+    epoch_history['gen_loss'].append(combined_gan_loss.item())
+    epoch_history['gen_id_loss'].append(id_loss.item())
+    epoch_history['gen_adv_loss'].append(adv_loss.item())
+    epoch_history['gen_cycle_loss'].append(cy_loss.item())
+    return combined_gan_loss, fake_imgs, epoch_history
+    
+
+def compute_discriminator_loss(discriminator, data, pool, loss_functions):
+    adversarial_loss = loss_functions[2]
+    #unpacking data
+    real_img, real_label, fake_img, fake_label = data 
+                               
+    #Real image loss
+    real_output = discriminator(real_img)
+    disc_real_loss = adversarial_loss(real_output, real_label)
+
+    #Fake image loss
+    fake_img = pool.update_image_pool(fake_img)
+    fake_output = discriminator(fake_img.detach())
+    disc_fake_loss = adversarial_loss(fake_output, fake_label)
 
     #Combined loss
-    combined_gan_loss = (identity_loss_A + identity_loss_B 
-                         + adversarial_loss_B2A + adversarial_loss_A2B
-                         + cycle_loss_ABA + cycle_loss_BAB)
-    return combined_gan_loss, fake_imgs
-    
-
-def compute_discriminator_loss():
-    #fake data
-    fake_img_A, fake_img_B = fake_imgs
-    
-    
-    adversarial_loss = loss_functions[2]
-    
-    # Real A image loss
-    real_output_A = discriminator_A(real_img_A)
-    disc_real_loss_A = adversarial_loss(real_output_A, real_label)
-
-    # Fake A image loss
-    fake_img_A = pool_A.update_image_pool(fake_img_A)
-    fake_output_A = discriminator_A(fake_img_A.detach())
-    disc_fake_loss_A = adversarial_loss(fake_output_A, fake_label)
-
-    # Combined loss and calculate gradients
-    loss_discriminator_A = (disc_real_loss_A + disc_fake_loss_A) / 2
-
-    
+    loss_discriminator = (disc_real_loss + disc_fake_loss) / 2
+    return loss_discriminator
 
 
-def train_cycle_gan(data, epochs, batch_size, lr, img_size):
+
+def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
     device = get_device(True)
     PATCH_SHAPE = 16 
     #seprating data
@@ -143,10 +145,17 @@ def train_cycle_gan(data, epochs, batch_size, lr, img_size):
     pool_A = ImagePool(max_size=50)
     pool_B = ImagePool(max_size=50)
     
+    history = {'gen_loss':[], 'disc_loss':[], 'gen_id_loss':[], 
+               'gen_adv_loss':[], 'gen_cycle_loss':[], 'disc_loss_A':[],
+               'disc_loss_B':[]}
     for epoch in range(epochs):
+        start = time.time()
+        epoch_history = {'gen_loss':[], 'disc_loss':[], 'gen_id_loss':[], 
+                         'gen_adv_loss':[], 'gen_cycle_loss':[], 
+                         'disc_loss_A':[], 'disc_loss_B':[]}
         for i, (data_A, data_B) in enumerate(zip(dataloader_A, dataloader_B)):
-            real_img_A, Y_A = data_A[0].to(device), data_A[1].to(device)
-            real_img_B, Y_B = data_B[0].to(device), data_B[1].to(device)
+            real_img_A = data_A.to(device)
+            real_img_B = data_B.to(device)
             
             # real data label is 1, fake data label is 0.
             real_label = torch.full((batch_size, 1), 1, device=device, 
@@ -158,31 +167,76 @@ def train_cycle_gan(data, epochs, batch_size, lr, img_size):
             discriminators = discriminator_A, discriminator_B
             real_imgs = (real_img_A, real_img_B)
             
-            ################# Update Generators A2B and B2A #################
+            ##################################################################
+            #                       Update Generators A2B and B2A
+            ##################################################################
             # Set gradients of generator_A and generator_B to zero
             optimizer_G.zero_grad()
             #forward pass and loss computation
-            combined_gan_loss, fake_imgs = forward_generators(generators, 
-                                                              discriminators, 
-                                                              real_imgs, 
-                                                              real_label, 
-                                                              loss_functions)
+            combined_gan_loss, fake_imgs, epoch_history = forward_generators(
+                generators, discriminators, real_imgs, real_label, 
+                loss_functions, epoch_history)
             #Compute gradients for generator_A and generator_B
             combined_gan_loss.backward()
             #Update generator_A and generator_B's weights
             optimizer_G.step()
             
-            ################# Update Discriminators A and B ##################
-            # Set D_A gradients to zero
+            
+            ##################################################################
+            #                       Update Discriminators A and B
+            ##################################################################
+            #unpacking fake data
+            fake_img_A, fake_img_B = fake_imgs
+            
+            ##################### Updating Discriminator A ###################
+            data_A = (real_img_A, real_label, fake_img_A, fake_label) 
+            # Set discriminator_A gradients to zero
             optimizer_D_A.zero_grad()
-            
-            # Calculate gradients for D_A
+            #forward pass and loss computation for Discriminator A
+            loss_discriminator_A = compute_discriminator_loss(discriminator_A, 
+                                                              data_A, pool_A, 
+                                                              loss_functions)
+            #Calculate gradients for discriminator_A
             loss_discriminator_A.backward()
-            # Update D_A weights
+            #Update discriminator_A weights
             optimizer_D_A.step()
+            #history update
+            epoch_history['disc_loss_A'].append(loss_discriminator_A.item())
             
+            ##################### Updating Discriminator B ###################
+            data_B = (real_img_B, real_label, fake_img_B, fake_label) 
+            # Set discriminator_B gradients to zero
+            optimizer_D_B.zero_grad()
+            #forward pass and loss computation for Discriminator B
+            loss_discriminator_B = compute_discriminator_loss(discriminator_B, 
+                                                              data_B, pool_B, 
+                                                              loss_functions)
+            #Calculate gradients for discriminator_B
+            loss_discriminator_B.backward()
+            #Update discriminator_B weights
+            optimizer_D_B.step()
+            #history update
+            epoch_history['disc_loss_B'].append(loss_discriminator_B.item())
             
+            #combined loss of discriminators
+            epoch_history['disc_loss'].append((loss_discriminator_A
+                                               +loss_discriminator_B).item())
+            #print info for each batch
+            info = get_info_string(i, epoch_history)
+            batch_info = f'Epoch: {epoch+1}/{epochs} | Batch: {i+1}/{num_batches} | '
+            print_inline(batch_info+info)
+        time_taken = convert_seconds(int(time.time() - start))
+        #compute statistics of one epoch
+        update_epoch_stats(epoch, epoch_history, history, time_taken)
+        #saving models
+        save_models(models, dump_path, epoch+1)
+        #saving images
+        save_images(real_imgs, generators, dump_path, epoch+1)
+        #saving history
+        write_pickle(history, os.path.join(dump_path, 'history.pkl'))
+    return models, history
             
+    
             
     
     
@@ -191,7 +245,11 @@ if __name__ == '__main__':
     IMG_SIZE = (256, 256)
     PATH = '../dataset/data'
     FILE_NAME = 'horse2zebra'
+    DUMP_PATH = os.path.join('dump', FILE_NAME)
     DATA_PATH = os.path.join(PATH, FILE_NAME+'.npz')
+    os.makedirs(DUMP_PATH, exist_ok=True)
+    
+    #loading or creating data
     if os.path.exists(DATA_PATH):
         print(f'\nLoading data from path: {DATA_PATH}')
         data = load_data(DATA_PATH)
@@ -199,6 +257,14 @@ if __name__ == '__main__':
         read_path = os.path.join(PATH, FILE_NAME)
         print(f'Reading and saving data from path: {read_path}')
         data = read_save_data(read_path, IMG_SIZE)
+        print(f'\nLoading data from path: {DATA_PATH}')
+        data = load_data(DATA_PATH)
+    
+    #parameters for training
     BATCH_SIZE = 1
+    EPOCHS = 2
+    LR = 0.001
+    models, history = train_cycle_gan(data, EPOCHS, BATCH_SIZE, LR, IMG_SIZE, 
+                                      DUMP_PATH)
     
         
