@@ -27,13 +27,16 @@ echo ''
 array=("apple2orange" "summer2winter_yosemite" "horse2zebra" "monet2photo" 
        "cezanne2photo" "ukiyoe2photo" "vangogh2photo" "maps" "cityscapes" 
        "facades" "iphone2dslr_flower")
-
+i=1
 for list in "${array[@]}"
 do
-    for item in $list
-    do
-        get_data "$item"
-    done
+    echo "$i $list"
+    let "i+=1" 
 done
+echo ''
+read -p "Enter your choice: " ch
+#downloading data
+echo -e "\nDownloading data: ${array[1]}\n"
+get_data "${array[1]}"
 
 
