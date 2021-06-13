@@ -13,11 +13,18 @@ from utils import save_images, convert_seconds,save_models
 from utils import get_device, write_pickle, print_inline
 from utils import get_info_string, update_epoch_stats
 from datagen import ImagePool
+import argparse
 import torch
 import time
 import os
 
 
+#parser
+parser = argparse.ArgumentParser(description='Cycle GAN using PyTorch.')
+parser.add_argument("--dumppath", type=str, default="./dump",
+                    help="path to directory where checkpoints will be stored.")
+args = parser.parse_args()
+print('Dump Path: ', args.dumppath)
 
 
 def compute_identity_loss(generators, real_imgs, identity_loss):
@@ -146,6 +153,7 @@ def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
     history = {'gen_loss':[], 'disc_loss':[], 'gen_id_loss':[], 
                'gen_adv_loss':[], 'gen_cycle_loss':[], 'disc_loss_A':[],
                'disc_loss_B':[]}
+    print('\n\t\t\t________________________________________________________\n')
     for epoch in range(epochs):
         start = time.time()
         epoch_history = {'gen_loss':[], 'disc_loss':[], 'gen_id_loss':[], 
@@ -232,6 +240,8 @@ def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
         save_images(real_imgs, generators, dump_path, epoch+1)
         #saving history
         write_pickle(history, os.path.join(dump_path, 'history.pkl'))
+        print('\t\t\t________________________________________________________\n')
+        print('\n\n')
     return models, history
             
     
@@ -243,7 +253,7 @@ if __name__ == '__main__':
     IMG_SIZE = (256, 256)
     PATH = '../dataset/data'
     FILE_NAME = 'horse2zebra'
-    DUMP_PATH = os.path.join('dump', FILE_NAME)
+    DUMP_PATH = os.path.join(args.dumppath, FILE_NAME)
     DATA_PATH = os.path.join(PATH, FILE_NAME+'.npz')
     os.makedirs(DUMP_PATH, exist_ok=True)
     
@@ -260,7 +270,7 @@ if __name__ == '__main__':
     
     #parameters for training
     BATCH_SIZE = 1
-    EPOCHS = 2
+    EPOCHS = 100
     LR = 0.001
     models, history = train_cycle_gan(data, EPOCHS, BATCH_SIZE, LR, IMG_SIZE, 
                                       DUMP_PATH)

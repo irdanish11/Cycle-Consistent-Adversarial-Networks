@@ -82,7 +82,7 @@ def update_epoch_stats(idx, epoch_history, history, time_taken):
     time_str = f' - Time Taken by epoch: {time_taken}.\n'
     #getting complete epoch info
     info = get_info_string(idx, history)
-    print('Epoch Completed.' + time_str + info)
+    print('\nEpoch Completed.' + time_str + info)
     return history    
 
 def print_inline(string):
