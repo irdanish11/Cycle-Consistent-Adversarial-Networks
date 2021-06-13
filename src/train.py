@@ -153,6 +153,7 @@ def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
     history = {'gen_loss':[], 'disc_loss':[], 'gen_id_loss':[], 
                'gen_adv_loss':[], 'gen_cycle_loss':[], 'disc_loss_A':[],
                'disc_loss_B':[]}
+    print('\n\t\t\t________________________________________________________\n')
     for epoch in range(epochs):
         start = time.time()
         epoch_history = {'gen_loss':[], 'disc_loss':[], 'gen_id_loss':[], 
@@ -239,6 +240,8 @@ def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
         save_images(real_imgs, generators, dump_path, epoch+1)
         #saving history
         write_pickle(history, os.path.join(dump_path, 'history.pkl'))
+        print('\t\t\t________________________________________________________\n')
+        print('\n\n')
     return models, history
             
     
@@ -267,7 +270,7 @@ if __name__ == '__main__':
     
     #parameters for training
     BATCH_SIZE = 1
-    EPOCHS = 2
+    EPOCHS = 100
     LR = 0.001
     models, history = train_cycle_gan(data, EPOCHS, BATCH_SIZE, LR, IMG_SIZE, 
                                       DUMP_PATH)
