@@ -125,7 +125,6 @@ def compute_discriminator_loss(discriminator, data, pool, loss_functions):
 
 def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
     device = get_device(True)
-    PATCH_SHAPE = 16 
     #seprating data
     train_A, train_B = data
     # calculate the number of batches per training epoch
@@ -139,8 +138,7 @@ def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
     #get optimizers
     optimizer_G, optimizer_D_A, optimizer_D_B = get_optimizers(models, lr)
     #get data loaders
-    dataloader_A, dataloader_B = get_data_loaders(data, batch_size, img_size,
-                                                  PATCH_SHAPE)
+    dataloader_A, dataloader_B = get_data_loaders(data, batch_size, img_size)
     #image pools for discriminators
     pool_A = ImagePool(max_size=50)
     pool_B = ImagePool(max_size=50)
