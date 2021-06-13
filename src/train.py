@@ -13,11 +13,18 @@ from utils import save_images, convert_seconds,save_models
 from utils import get_device, write_pickle, print_inline
 from utils import get_info_string, update_epoch_stats
 from datagen import ImagePool
+import argparse
 import torch
 import time
 import os
 
 
+#parser
+parser = argparse.ArgumentParser(description='Cycle GAN using PyTorch.')
+parser.add_argument("--dumppath", type=str, default="./dump",
+                    help="path to directory where checkpoints will be stored.")
+args = parser.parse_args()
+print('Dump Path: ', args.dumppath)
 
 
 def compute_identity_loss(generators, real_imgs, identity_loss):
@@ -243,7 +250,7 @@ if __name__ == '__main__':
     IMG_SIZE = (256, 256)
     PATH = '../dataset/data'
     FILE_NAME = 'horse2zebra'
-    DUMP_PATH = os.path.join('dump', FILE_NAME)
+    DUMP_PATH = os.path.join(args.dumppath, FILE_NAME)
     DATA_PATH = os.path.join(PATH, FILE_NAME+'.npz')
     os.makedirs(DUMP_PATH, exist_ok=True)
     
