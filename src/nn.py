@@ -6,8 +6,9 @@ Created on Tue Jun  8 00:07:48 2021
 @author: danish
 """
 
+import torch
+import itertools
 import torch.nn as nn
-
 
 class ResNetBlock(nn.Module):
     def __init__(self, channels):
@@ -30,8 +31,9 @@ class ResNetBlock(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self):
+    def __init__(self, name):
         super(Generator, self).__init__()
+        self.name = name
         self.main = nn.Sequential(
             ############## Encoder ##############
             # Initial convolution block
@@ -83,7 +85,8 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
         super(Discriminator, self).__init__()
         self.main = nn.Sequential(
             #1st layer
@@ -116,4 +119,34 @@ class Discriminator(nn.Module):
     def forward(self, x):
         x = self.main(x)
         return x
+   
     
+def get_models(device):
+    # create models
+    generator_A2B = Generator(name='generator_A2B').to(device)
+    generator_B2A = Generator(name='generator_B2A').to(device)
+    discriminator_A = Discriminator(name='discriminator_A').to(device)
+    discriminator_B = Discriminator(name='discriminator_B').to(device)
+    return generator_A2B, generator_B2A, discriminator_A, discriminator_B
+
+
+def get_criterions(device):
+    # define loss function (adversarial_loss) and optimizer
+    cycle_loss = torch.nn.L1Loss().to(device)
+    identity_loss = torch.nn.L1Loss().to(device)
+    adversarial_loss = torch.nn.MSELoss().to(device)
+    return cycle_loss, identity_loss, adversarial_loss
+
+
+def get_optimizers(models, lr):
+    generator_A2B, generator_B2A, discriminator_A, discriminator_B = models
+    # Optimizers
+    optimizer_G = torch.optim.Adam(itertools.chain(generator_A2B.parameters(), 
+                                                   generator_B2A.parameters()),
+                                                   betas=(0.5, 0.999),
+                                                   lr=lr)
+    optimizer_D_A = torch.optim.Adam(discriminator_A.parameters(), lr=lr, 
+                                     betas=(0.5, 0.999))
+    optimizer_D_B = torch.optim.Adam(discriminator_B.parameters(), lr=lr, 
+                                     betas=(0.5, 0.999))
+    return optimizer_G, optimizer_D_A, optimizer_D_B
