@@ -12,6 +12,7 @@ from nn import get_models, get_criterions, get_optimizers
 from utils import save_images, convert_seconds,save_models
 from utils import get_device, write_pickle, print_inline
 from utils import get_info_string, update_epoch_stats
+from utils import load_checkpoints
 from datagen import ImagePool
 import argparse
 import torch
@@ -129,7 +130,6 @@ def compute_discriminator_loss(discriminator, data, pool, loss_functions):
     return loss_discriminator
 
 
-
 def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
     device = get_device(True)
     #seprating data
@@ -139,6 +139,9 @@ def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
     
     #get models
     models = get_models(device)
+    #checking if checkpoints present then resume training
+    start_epoch, models = load_checkpoints(models, dump_path)
+    #unpacking models
     generator_A2B, generator_B2A, discriminator_A, discriminator_B = models
     #get loss functions
     loss_functions = get_criterions(device)
@@ -154,7 +157,7 @@ def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
                'gen_adv_loss':[], 'gen_cycle_loss':[], 'disc_loss_A':[],
                'disc_loss_B':[]}
     print('\n\t\t\t________________________________________________________\n')
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs):
         start = time.time()
         epoch_history = {'gen_loss':[], 'disc_loss':[], 'gen_id_loss':[], 
                          'gen_adv_loss':[], 'gen_cycle_loss':[], 
@@ -244,11 +247,7 @@ def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
         print('\n\n')
     return models, history
             
-    
-            
-    
-    
-    
+
 if __name__ == '__main__':
     IMG_SIZE = (256, 256)
     PATH = '../dataset/data'
