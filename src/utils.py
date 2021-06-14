@@ -16,6 +16,7 @@ import torch.nn.parallel
 import numpy as np
 import torchvision.utils as vutils
 from tqdm import tqdm
+from glob import glob
 
 
 def get_device(cuda=True):
@@ -60,7 +61,7 @@ def get_info_string(idx, history):
             + 'Discriminator Loss: {0:.4f} | '.format(history['disc_loss'][idx])
             + 'Identity Loss: {0:.4f} | '.format(history['gen_id_loss'][idx])
             + 'Adversarial Loss: {0:.4f} | '.format(history['gen_adv_loss'][idx])
-            + 'Cycle Loss: {0:.4f} |'.format(history['gen_cycle_loss'][idx])
+            + 'Cycle Loss: {0:.4f} | '.format(history['gen_cycle_loss'][idx])
             + 'Discriminator Loss A: {0:.4f} | '.format(
                 history['disc_loss_A'][idx])
             + 'Discriminator Loss B: {0:.4f} | '.format(
@@ -133,3 +134,41 @@ def convert_seconds(seconds):
     minutes = seconds // 60
     seconds %= 60   
     return "%d:%02d:%02d" % (hour, minutes, seconds)
+
+def check_checkpoints(dump_path):
+    flag = False
+    ckpt_dir_path = os.path.join(dump_path, 'ckpt')
+    ckpt_dir = list(map(lambda x:int(x), os.listdir(ckpt_dir_path)))
+    #ascending sort and flip to get values in descending order
+    ckpt_dir_flipped = np.flip(np.sort(ckpt_dir))
+    for idx in ckpt_dir_flipped:
+        ckpts_path = glob(os.path.join(ckpt_dir_path, str(idx), '*.pth'))
+        if len(ckpts_path)==4:
+            print(f'\nCheckpoints found at epoch: {idx}, Paths:\n{ckpts_path}')
+            flag = True
+            break
+    return flag, idx
+
+def load_checkpoints(models, dump_path):
+    new_models = list()
+    flag, idx = check_checkpoints(dump_path)
+    if flag:
+        ch = input(f'\nCheckpoints found at epoch {idx}, do you want to resume'
+                   + ' training (Y/n): ')
+        if ch.lower()=='y':
+            start_epoch = idx
+            for model in models:
+                ckpt_path = os.path.join(dump_path, 'ckpt', str(idx), 
+                                         model.name+'.pth')
+                new_models.append(load_network(ckpt_path, model))
+            new_models = tuple(new_models)
+            print(f'Training will resume from epoch: {start_epoch}')
+        else:
+            start_epoch = 0
+            new_models = models
+            print(f'Training will start from epoch: {start_epoch+1}')
+    else:
+        start_epoch = 0
+        new_models = models
+        print(f'Training will start from epoch: {start_epoch+1}')
+    return start_epoch, new_models
