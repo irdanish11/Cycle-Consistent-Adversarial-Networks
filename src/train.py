@@ -236,7 +236,8 @@ def train_cycle_gan(data, epochs, batch_size, lr, img_size, dump_path):
             print_inline(batch_info+info)
         time_taken = convert_seconds(int(time.time() - start))
         #compute statistics of one epoch
-        update_epoch_stats(epoch, epoch_history, history, time_taken)
+        idx = epoch - start_epoch
+        update_epoch_stats(idx, epoch_history, history, time_taken)
         #saving models
         save_models(models, dump_path, epoch+1)
         #saving images
