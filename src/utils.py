@@ -163,7 +163,7 @@ def load_checkpoints(models, dump_path):
                                          model.name+'.pth')
                 new_models.append(load_network(ckpt_path, model))
             new_models = tuple(new_models)
-            print(f'Training will resume from epoch: {start_epoch}')
+            print(f'Training will resume from epoch: {start_epoch+1}')
         else:
             start_epoch = 0
             new_models = models
