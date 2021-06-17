@@ -15,7 +15,7 @@ import torch
 from torchvision import transforms
 import random
 
-def read_save_data(path, size):
+def read_save_data(path, size, save=True):
     dir_path = os.listdir(path)  
     data = {'A':[], 'B':[]}
     for d in dir_path:
@@ -28,11 +28,8 @@ def read_save_data(path, size):
                 img = np.array(cv2.resize(img, size))
                 data[c].append(img)
     fname = path+'.npz'
-    # size_A, size_B = len(data['A']), len(data['B'])
-    # min_size = size_A if size_A < size_B else size_B
-    # a = np.array(data['A'][0:min_size])
-    # b = np.array(data['B'][0:min_size])
-    np.savez_compressed(fname, np.array(data['A']), np.array(data['B']))
+    if save:
+        np.savez_compressed(fname, np.array(data['A']), np.array(data['B']))
     return data
     
 
@@ -104,6 +101,20 @@ def get_data_loaders(data, batch_size, image_size):
     dataloader_A = torch.utils.data.DataLoader(dataset_A, batch_size)
     dataloader_B = torch.utils.data.DataLoader(dataset_B, batch_size)
     return dataloader_A, dataloader_B
+
+def get_test_loaders(test_path, batch_size, image_size):
+    data = read_save_data(test_path, image_size, save=False)
+    a, b = np.array(data['A']), np.array(data['B'])
+    limit = min(len(a), len(b)) 
+    try:
+        a = a[0:limit]
+    except IndexError:
+        b = b[0:limit]
+    testloader_A, testloader_B = get_data_loaders((a, b), batch_size, 
+                                                  image_size)
+    return testloader_A, testloader_B
+
+
 
 if __name__ == '__main__':        
     data = read_save_data(path='../dataset/data/horse2zebra', size=(256, 256))

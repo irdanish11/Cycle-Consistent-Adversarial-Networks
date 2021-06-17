@@ -17,6 +17,7 @@ import numpy as np
 import torchvision.utils as vutils
 from tqdm import tqdm
 from glob import glob
+from nn import get_models
 
 
 def get_device(cuda=True):
@@ -119,10 +120,10 @@ def save_images(real_imgs, generators, path, idx):
     fake_img_B = 0.5 * (generator_A2B(real_img_A).detach() + 1.0)
 
     vutils.save_image(fake_img_A.detach(), 
-                      os.path.join(img_path, 'fake_img_A.png'),
+                      os.path.join(img_path, 'fake_img_B.png'),
                       normalize=True)
     vutils.save_image(fake_img_B.detach(),
-                      os.path.join(img_path, 'fake_img_B.png'),
+                      os.path.join(img_path, 'fake_img_A.png'),
                       normalize=True)    
     print(f'Images Saved at path: {img_path}') 
     
@@ -163,7 +164,7 @@ def load_checkpoints(models, dump_path):
                                          model.name+'.pth')
                 new_models.append(load_network(ckpt_path, model))
             new_models = tuple(new_models)
-            print(f'Training will resume from epoch: {start_epoch}')
+            print(f'Training will resume from epoch: {start_epoch+1}')
         else:
             start_epoch = 0
             new_models = models
@@ -173,3 +174,12 @@ def load_checkpoints(models, dump_path):
         new_models = models
         print(f'Training will start from epoch: {start_epoch+1}')
     return start_epoch, new_models
+
+def load_serving_models(ckpt_path, device):
+    models = get_models(device, discriminators=False)
+    new_models = list()
+    for model in models:
+        model_path = os.path.join(ckpt_path, model.name+'.pth')
+        model = load_network(model_path, model)
+        new_models.append(model.eval())
+    return tuple(new_models)
