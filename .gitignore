@@ -7,4 +7,4 @@ dataset/wget-log
 dataset/data
 src/cycle_keras.py
 src/dump
-src/data
+#src/data
