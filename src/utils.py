@@ -120,10 +120,10 @@ def save_images(real_imgs, generators, path, idx):
     fake_img_B = 0.5 * (generator_A2B(real_img_A).detach() + 1.0)
 
     vutils.save_image(fake_img_A.detach(), 
-                      os.path.join(img_path, 'fake_img_A.png'),
+                      os.path.join(img_path, 'fake_img_B.png'),
                       normalize=True)
     vutils.save_image(fake_img_B.detach(),
-                      os.path.join(img_path, 'fake_img_B.png'),
+                      os.path.join(img_path, 'fake_img_A.png'),
                       normalize=True)    
     print(f'Images Saved at path: {img_path}') 
     
