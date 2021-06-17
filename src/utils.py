@@ -17,6 +17,7 @@ import numpy as np
 import torchvision.utils as vutils
 from tqdm import tqdm
 from glob import glob
+from nn import get_models
 
 
 def get_device(cuda=True):
@@ -173,3 +174,12 @@ def load_checkpoints(models, dump_path):
         new_models = models
         print(f'Training will start from epoch: {start_epoch+1}')
     return start_epoch, new_models
+
+def load_serving_models(ckpt_path, device):
+    models = get_models(device, discriminators=False)
+    new_models = list()
+    for model in models:
+        model_path = os.path.join(ckpt_path, model.name+'.pth')
+        model = load_network(model_path, model)
+        new_models.append(model.eval())
+    return tuple(new_models)

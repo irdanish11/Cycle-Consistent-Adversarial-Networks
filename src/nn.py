@@ -121,13 +121,16 @@ class Discriminator(nn.Module):
         return x
    
     
-def get_models(device):
+def get_models(device, discriminators=True):
     # create models
     generator_A2B = Generator(name='generator_A2B').to(device)
     generator_B2A = Generator(name='generator_B2A').to(device)
-    discriminator_A = Discriminator(name='discriminator_A').to(device)
-    discriminator_B = Discriminator(name='discriminator_B').to(device)
-    return generator_A2B, generator_B2A, discriminator_A, discriminator_B
+    if discriminators:
+        discriminator_A = Discriminator(name='discriminator_A').to(device)
+        discriminator_B = Discriminator(name='discriminator_B').to(device)
+        return generator_A2B, generator_B2A, discriminator_A, discriminator_B
+    else:
+        return generator_A2B, generator_B2A
 
 
 def get_criterions(device):
