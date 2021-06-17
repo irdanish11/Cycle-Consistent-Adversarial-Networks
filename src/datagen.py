@@ -28,13 +28,17 @@ def read_save_data(path, size):
                 img = np.array(cv2.resize(img, size))
                 data[c].append(img)
     fname = path+'.npz'
+    # size_A, size_B = len(data['A']), len(data['B'])
+    # min_size = size_A if size_A < size_B else size_B
+    # a = np.array(data['A'][0:min_size])
+    # b = np.array(data['B'][0:min_size])
     np.savez_compressed(fname, np.array(data['A']), np.array(data['B']))
     return data
     
 
 def load_data(fname):
     data = np.load(fname)
-    train_A, train_B = data['arr_0'], data['arr_0']
+    train_A, train_B = data['arr_0'], data['arr_1']
     return train_A, train_B
     
 
