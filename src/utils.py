@@ -136,6 +136,7 @@ def convert_seconds(seconds):
     return "%d:%02d:%02d" % (hour, minutes, seconds)
 
 def check_checkpoints(dump_path):
+    idx = 0
     flag = False
     ckpt_dir_path = os.path.join(dump_path, 'ckpt')
     ckpt_dir = list(map(lambda x:int(x), os.listdir(ckpt_dir_path)))
