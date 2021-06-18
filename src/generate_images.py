@@ -80,11 +80,14 @@ def translate_test_imgs(test_path, image_size, save_path):
     print('\nAll images translated successfully!')
 
 
+
+
 if __name__ == '__main__':
     #paths
-    ckpt_path = 'dump/horse2zebra/ckpt/47'
+    ckpt_path = 'dump/horse2zebra/ckpt/100'
     test_path = 'data'
     save_path = 'data/generated'
+    
     
     #translate images
     image_size = (256, 256)
