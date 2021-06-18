@@ -20,6 +20,18 @@ from glob import glob
 from nn import get_models
 
 
+def combine_histories(hist_path):
+    all_hists = glob(os.path.join(hist_path, '*.pkl'))
+    history = {}
+    for i, h in tqdm(enumerate(all_hists)):
+        hist = read_pickle(h)
+        if i==0:
+            for k in hist.keys():
+                history[k] = []
+        for key, values in hist.items():
+            history[key].extend(values)
+    write_pickle(history, os.path.join(hist_path, 'history.pkl'))
+
 def get_device(cuda=True):
     cuda = cuda and torch.cuda.is_available()
     print("PyTorch version: {}".format(torch.__version__))
@@ -111,19 +123,19 @@ def save_images(real_imgs, generators, path, idx):
     #generator models
     generator_B2A, generator_A2B = generators
     #saving real images
-    vutils.save_image(real_img_A, os.path.join(img_path, 'real_img_A.png'),
+    vutils.save_image(real_img_A, os.path.join(img_path, 'A_real_img.png'),
                       normalize=True)
-    vutils.save_image(real_img_B, os.path.join(img_path, 'real_img_B.png'),
+    vutils.save_image(real_img_B, os.path.join(img_path, 'B_real_img.png'),
                       normalize=True)
 
     fake_img_A = 0.5 * (generator_B2A(real_img_B).detach() + 1.0)
     fake_img_B = 0.5 * (generator_A2B(real_img_A).detach() + 1.0)
 
     vutils.save_image(fake_img_A.detach(), 
-                      os.path.join(img_path, 'fake_img_B.png'),
+                      os.path.join(img_path, 'B_fake_img.png'),
                       normalize=True)
     vutils.save_image(fake_img_B.detach(),
-                      os.path.join(img_path, 'fake_img_A.png'),
+                      os.path.join(img_path, 'A_fake_img.png'),
                       normalize=True)    
     print(f'Images Saved at path: {img_path}') 
     
